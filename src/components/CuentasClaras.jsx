@@ -1,4 +1,4 @@
-import { Camera, CheckCircle2, AlertCircle, Clock, Sparkles, ShieldCheck, TrendingUp, Users, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { CheckCircle2, Clock, Sparkles, ShieldCheck, TrendingUp, Users, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
 function calcularSaldos(INTEGRANTES, gastos, abonos) {
   if (INTEGRANTES.length === 0) return new Map();
@@ -41,11 +41,7 @@ export default function CuentasClaras({
   gastos = [],
   abonos = [],
   saldoBanco = 0,
-  perfil,
-  profilePhotos = {},
-  photoError,
-  onUploadPhoto,
-  uploadingPhoto
+  perfil
 }) {
   const saldos = calcularSaldos(INTEGRANTES, gastos, abonos);
 
@@ -107,10 +103,10 @@ export default function CuentasClaras({
             <ShieldCheck size={18} className="text-emerald-400 shrink-0" />
             <div>
               <p className="text-xs font-bold text-slate-200">
-                Fondo Común (Manuel Jr)
+                Fondo Común
               </p>
               <p className="text-[11px] text-slate-400">
-                Dinero disponible para pagos colectivos
+                Administrado por Manuel Jr para pagos colectivos
               </p>
             </div>
           </div>
@@ -137,17 +133,10 @@ export default function CuentasClaras({
             Estado de Cuentas por Integrante
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Cada quien pone su parte y Manuel Jr ayuda a administrar el fondo.
+            Cada quien pone su parte y Manuel Jr ayuda a administrar el fondo común.
           </p>
         </div>
       </div>
-
-      {photoError && (
-        <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-          <AlertCircle size={15} className="shrink-0" />
-          <span>{photoError}</span>
-        </div>
-      )}
 
       {/* Member Cards Grid */}
       <div className="space-y-3.5">
@@ -159,7 +148,7 @@ export default function CuentasClaras({
           const totalAbonado = movimientosMiembro
             .filter(abono => abono.tipo !== 'saida')
             .reduce((sum, abono) => sum + (Number(abono.monto) || 0), 0);
-          const totalRecibidoDelBanco = movimientosMiembro
+          const totalRecibidoDelFondo = movimientosMiembro
             .filter(abono => abono.tipo === 'saida')
             .reduce((sum, abono) => sum + (Number(abono.monto) || 0), 0);
           const saldoCentavos = saldos.get(member.nombre) || 0;
@@ -177,40 +166,8 @@ export default function CuentasClaras({
               {/* Card Header: Avatar, Name, Admin Badge, Status Badge */}
               <div className="flex justify-between items-center gap-2">
                 <div className="flex items-center gap-3">
-                  {/* Avatar with Monogram or Image */}
-                  <div className="relative">
-                    <div className={`w-11 h-11 rounded-full avatar-ring avatar-${member.id} text-base`}>
-                      {profilePhotos[member.id] ? (
-                        <img
-                          src={profilePhotos[member.id]}
-                          alt={`Foto de ${member.nombre}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        member.nombre.slice(0, 1)
-                      )}
-                    </div>
-
-                    {/* Camera button only for current user's profile */}
-                    {isCurrentUser && (
-                      <label
-                        className="avatar-camera-btn"
-                        title="Cambiar mi foto de perfil"
-                      >
-                        <Camera size={12} />
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          aria-label="Elegir foto de perfil"
-                          className="hidden"
-                          disabled={uploadingPhoto}
-                          onChange={event => {
-                            onUploadPhoto(event.target.files?.[0]);
-                            event.target.value = '';
-                          }}
-                        />
-                      </label>
-                    )}
+                  <div className={`w-11 h-11 rounded-full avatar-ring avatar-${member.id} text-base`}>
+                    {member.nombre.slice(0, 1)}
                   </div>
 
                   <div>
@@ -281,7 +238,7 @@ export default function CuentasClaras({
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
                     {member.esAdmin
                       ? `Manuel Jr también aporta $${totalDebe.toFixed(2)} para cubrir su cuota.`
-                      : `Debe aportar al fondo de Manuel Jr: $${totalDebe.toFixed(2)}`}
+                      : `Debe aportar al fondo común: $${totalDebe.toFixed(2)}`}
                   </p>
                 )}
 
@@ -289,11 +246,11 @@ export default function CuentasClaras({
                   <div className="space-y-1">
                     <p className="flex items-center gap-1.5 text-emerald-300/90 font-medium">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                      Del fondo de la casa, Manuel Jr le devolverá ${totalRecibe.toFixed(2)}.
+                      El fondo común debe devolverle $${totalRecibe.toFixed(2)}.
                     </p>
-                    {totalRecibidoDelBanco > 0 && (
+                    {totalRecibidoDelFondo > 0 && (
                       <p className="text-[11px] text-slate-400 pl-3">
-                        (Ya recibió ${totalRecibidoDelBanco.toFixed(2)} del fondo anteriormente)
+                        (Ya recibió ${totalRecibidoDelFondo.toFixed(2)} del fondo anteriormente)
                       </p>
                     )}
                   </div>

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { auth, db, storage } from './firebase';
+import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy, writeBatch } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy, writeBatch, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Home, LogOut, Users, PieChart, PlusCircle, ArrowLeftRight, Sun, Moon, Sparkles, Loader2 } from 'lucide-react';
 
 import Login from './components/Login';
@@ -28,6 +27,13 @@ const PRESUPUESTO_BASE = [
   { categoria: 'Fondo de Reserva / Imprevistos', objetivo: 300 }
 ];
 
+const getLocalDateString = () => {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${today.getFullYear()}-${month}-${day}`;
+};
+
 export default function App() {
   const [theme, setTheme] = useState(() => (
     window.localStorage.getItem('cuentas-claras-theme') === 'light' ? 'light' : 'dark'
@@ -41,10 +47,10 @@ export default function App() {
   const [tab, setTab] = useState('cuentas'); // 'cuentas', 'pagos', 'presupuesto', 'gastos'
   const [gastos, setGastos] = useState([]);
   const [abonos, setAbonos] = useState([]);
+  const [presupuesto, setPresupuesto] = useState(PRESUPUESTO_BASE);
+  const [budgetError, setBudgetError] = useState('');
+  const [savingBudget, setSavingBudget] = useState(false);
   const [limpiandoColeccion, setLimpiandoColeccion] = useState(null);
-  const [profilePhotos, setProfilePhotos] = useState({});
-  const [photoError, setPhotoError] = useState('');
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [monto, setMonto] = useState('');
   const [categoria, setCategoria] = useState(PRESUPUESTO_BASE[0].categoria);
@@ -64,47 +70,11 @@ export default function App() {
         if (p) setPagadoPor(p.nombre);
       } else {
         setPerfil(null);
-        setProfilePhotos({});
-        setPhotoError('');
       }
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (!user) return undefined;
-
-    let cancelled = false;
-    const loadProfilePhotos = async () => {
-      try {
-        const photos = await Promise.all(INTEGRANTES.map(async member => {
-          try {
-            const url = await getDownloadURL(ref(storage, `avatars/${member.id}/profile`));
-            return [member.id, url];
-          } catch (err) {
-            if (err.code === 'storage/object-not-found') return [member.id, null];
-            throw err;
-          }
-        }));
-
-        if (!cancelled) {
-          setProfilePhotos(Object.fromEntries(photos.filter(([, url]) => url)));
-          setPhotoError('');
-        }
-      } catch (err) {
-        console.error('Error al cargar las fotos de perfil:', err);
-        if (!cancelled) {
-          setPhotoError('No se pudieron cargar las fotos de perfil.');
-        }
-      }
-    };
-
-    loadProfilePhotos();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -124,6 +94,38 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return undefined;
+    const presupuestoRef = doc(db, 'configuracion', 'presupuesto');
+    const unsubscribe = onSnapshot(presupuestoRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        setPresupuesto(PRESUPUESTO_BASE);
+        setBudgetError('');
+        return;
+      }
+
+      const objetivosGuardados = Array.isArray(snapshot.data().categorias)
+        ? snapshot.data().categorias
+        : [];
+      setPresupuesto(PRESUPUESTO_BASE.map(item => {
+        const objetivoGuardado = objetivosGuardados?.find(
+          categoriaGuardada => categoriaGuardada.categoria === item.categoria
+        )?.objetivo;
+        const objetivo = Number(objetivoGuardado);
+        return {
+          ...item,
+          objetivo: Number.isFinite(objetivo) && objetivo >= 0 ? objetivo : item.objetivo
+        };
+      }));
+      setBudgetError('');
+    }, (err) => {
+      console.error('Error al cargar los objetivos del presupuesto:', err);
+      setBudgetError('No se pudieron cargar las metas del plan. Revisa la conexión y los permisos.');
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -139,29 +141,37 @@ export default function App() {
     setTheme(currentTheme => currentTheme === 'dark' ? 'light' : 'dark');
   };
 
-  const handleUploadPhoto = async (file) => {
-    if (!file || !perfil?.id) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setPhotoError('Elige una imagen JPG, PNG o WebP.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setPhotoError('La foto debe pesar menos de 5 MB.');
-      return;
+  const handleUpdateBudgetGoal = async (categoria, objetivo) => {
+    if (!perfil?.esAdmin) {
+      throw new Error('Solo el administrador puede cambiar las metas.');
     }
 
-    setUploadingPhoto(true);
-    setPhotoError('');
+    const objetivoNumerico = Number(objetivo);
+    if (!Number.isFinite(objetivoNumerico) || objetivoNumerico < 0) {
+      setBudgetError('Ingresa un objetivo válido, igual o mayor que cero.');
+      return false;
+    }
+
+    setSavingBudget(true);
+    setBudgetError('');
     try {
-      const avatarRef = ref(storage, `avatars/${perfil.id}/profile`);
-      const uploadedPhoto = await uploadBytes(avatarRef, file, { contentType: file.type });
-      const photoUrl = await getDownloadURL(uploadedPhoto.ref);
-      setProfilePhotos(currentPhotos => ({ ...currentPhotos, [perfil.id]: photoUrl }));
+      const presupuestoActualizado = presupuesto.map(item => (
+        item.categoria === categoria
+          ? { ...item, objetivo: objetivoNumerico }
+          : item
+      ));
+      await setDoc(doc(db, 'configuracion', 'presupuesto'), {
+        categorias: presupuestoActualizado,
+        actualizadoPor: perfil.email,
+        actualizadoEn: serverTimestamp()
+      });
+      return true;
     } catch (err) {
-      console.error('Error al guardar la foto de perfil:', err);
-      setPhotoError('No se pudo guardar la foto. Revisa la conexión y los permisos.');
+      console.error('Error al guardar el objetivo del presupuesto:', err);
+      setBudgetError('No se pudo guardar la meta. Revisa la conexión y los permisos e inténtalo de nuevo.');
+      return false;
     } finally {
-      setUploadingPhoto(false);
+      setSavingBudget(false);
     }
   };
 
@@ -173,7 +183,7 @@ export default function App() {
       categoria,
       pagadoPor,
       registradoPor: perfil.nombre,
-      fecha: new Date().toISOString().split('T')[0]
+      fecha: getLocalDateString()
     });
     setMonto('');
     setTab('cuentas');
@@ -301,11 +311,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 shadow-inner">
               <div className={`w-6 h-6 rounded-full avatar-ring avatar-${perfil?.id || 'manuel'} text-[10px]`}>
-                {profilePhotos[perfil?.id] ? (
-                  <img src={profilePhotos[perfil.id]} alt={perfil?.nombre} className="w-full h-full object-cover" />
-                ) : (
-                  perfil?.nombre?.[0] || 'U'
-                )}
+                {perfil?.nombre?.[0] || 'U'}
               </div>
               <span className="text-xs font-semibold text-slate-200 max-w-[85px] sm:max-w-none truncate">
                 {perfil?.nombre?.split(' ')[0]}
@@ -351,10 +357,6 @@ export default function App() {
             abonos={abonos}
             saldoBanco={saldoBanco}
             perfil={perfil}
-            profilePhotos={profilePhotos}
-            photoError={photoError}
-            onUploadPhoto={handleUploadPhoto}
-            uploadingPhoto={uploadingPhoto}
           />
         )}
 
@@ -372,8 +374,12 @@ export default function App() {
 
         {tab === 'presupuesto' && (
           <Presupuesto 
-            PRESUPUESTO_BASE={PRESUPUESTO_BASE}
+            PRESUPUESTO_BASE={presupuesto}
             gastos={gastos}
+            perfil={perfil}
+            onUpdateGoal={handleUpdateBudgetGoal}
+            savingGoal={savingBudget}
+            budgetError={budgetError}
           />
         )}
 
@@ -386,7 +392,7 @@ export default function App() {
             setCategoria={setCategoria}
             pagadoPor={pagadoPor}
             setPagadoPor={setPagadoPor}
-            PRESUPUESTO_BASE={PRESUPUESTO_BASE}
+            PRESUPUESTO_BASE={presupuesto}
             INTEGRANTES={INTEGRANTES}
             BANCO={BANCO}
             perfil={perfil}

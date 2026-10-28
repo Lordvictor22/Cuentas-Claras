@@ -176,30 +176,6 @@ body {
   color: #ffffff;
 }
 
-/* Camera button overlay for profile */
-.avatar-camera-btn {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 22px;
-  height: 22px;
-  background: #10b981;
-  color: #ffffff;
-  border: 2px solid #090e17;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-  transition: transform 160ms ease, background-color 160ms ease;
-}
-
-.avatar-camera-btn:hover {
-  transform: scale(1.15);
-  background-color: #059669;
-}
-
 /* Light Mode Overrides */
 html[data-theme="light"] {
   color-scheme: light;
@@ -245,10 +221,6 @@ html[data-theme="light"] .bottom-dock {
   background: rgba(255, 255, 255, 0.92);
   border-top-color: #e2e8f0;
   box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.08);
-}
-
-html[data-theme="light"] .avatar-camera-btn {
-  border-color: #ffffff;
 }
 
 /* Numerical formatting */

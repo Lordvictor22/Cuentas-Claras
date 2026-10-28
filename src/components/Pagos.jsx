@@ -263,7 +263,9 @@ export default function Pagos({ abonos = [], handleAddAbono, handleDeleteAbono, 
                 <div className="space-y-1">
                   <label className="block text-xs text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
                     <User size={13} />
-                    {tipoMovimiento === 'saida' ? '¿Quién recibió del banco?' : '¿Quién pagó al banco?'}
+                    {tipoMovimiento === 'saida'
+                      ? '¿Quién recibió del fondo común?'
+                      : '¿Quién aportó al fondo común?'}
                   </label>
                   <select 
                     value={membroSeleccionado}
