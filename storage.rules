@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /avatars/{memberId}/profile {
+      function isProfileOwner() {
+        return request.auth != null && (
+          (memberId == 'manuel' && request.auth.token.email == 'manuel@hogar.com') ||
+          (memberId == 'mayely' && request.auth.token.email == 'mayely@hogar.com') ||
+          (memberId == 'jesus' && request.auth.token.email == 'jesus@hogar.com') ||
+          (memberId == 'yelixa' && request.auth.token.email == 'yelixa@hogar.com')
+        );
+      }
+
+      allow read: if request.auth != null;
+      allow create, update: if isProfileOwner()
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+  }
+}
