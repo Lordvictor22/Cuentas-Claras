@@ -1,4 +1,4 @@
-import { PlusCircle, Trash2, ShoppingBag, Zap, Home, Coffee, ShieldCheck, PieChart, Calendar, User, Wallet, Sparkles } from 'lucide-react';
+import { PlusCircle, Trash2, ShoppingBag, Zap, Home, Coffee, ShieldCheck, CarFront, PieChart, Calendar, User, Wallet, Sparkles } from 'lucide-react';
 
 const CATEGORY_META = {
   'Mercado / Alimentos': { icon: ShoppingBag, color: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/25' },
@@ -6,6 +6,7 @@ const CATEGORY_META = {
   'Vivienda / Mantenimiento': { icon: Home, color: 'text-blue-400 bg-blue-500/15 border-blue-500/25' },
   'Entretenimiento / Salidas': { icon: Coffee, color: 'text-purple-400 bg-purple-500/15 border-purple-500/25' },
   'Fondo de Reserva / Imprevistos': { icon: ShieldCheck, color: 'text-teal-400 bg-teal-500/15 border-teal-500/25' },
+  Carros: { icon: CarFront, color: 'text-cyan-400 bg-cyan-500/15 border-cyan-500/25' },
 };
 
 export default function Gastos({
@@ -14,6 +15,8 @@ export default function Gastos({
   setMonto,
   categoria,
   setCategoria,
+  producto,
+  setProducto,
   pagadoPor,
   setPagadoPor,
   PRESUPUESTO_BASE = [],
@@ -106,6 +109,22 @@ export default function Gastos({
           </div>
         </div>
 
+        <div className="space-y-1.5">
+          <label htmlFor="producto-gasto" className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+            Producto comprado
+          </label>
+          <input
+            id="producto-gasto"
+            type="text"
+            value={producto}
+            onChange={e => setProducto(e.target.value)}
+            placeholder="Ej.: Leche, detergente, aceite..."
+            maxLength={100}
+            className="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl p-3 text-white text-sm font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition placeholder-slate-500"
+            required
+          />
+        </div>
+
         {/* Payer Selector */}
         <div className="space-y-1.5">
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -190,6 +209,11 @@ export default function Gastos({
                     <p className="font-display font-bold text-sm sm:text-base text-white">
                       {g.categoria}
                     </p>
+                    {g.producto && (
+                      <p className="text-xs text-slate-300 mt-0.5">
+                        Producto: {g.producto}
+                      </p>
+                    )}
                     <p className="text-xs text-slate-400 flex items-center gap-2 flex-wrap mt-0.5">
                       <span>
                         Cubierto por <strong className="text-emerald-400 font-semibold">{g.pagadoPor}</strong>

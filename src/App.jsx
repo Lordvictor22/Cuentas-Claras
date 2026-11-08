@@ -24,7 +24,8 @@ const PRESUPUESTO_BASE = [
   { categoria: 'Servicios Básicos', objetivo: 150 },
   { categoria: 'Vivienda / Mantenimiento', objetivo: 200 },
   { categoria: 'Entretenimiento / Salidas', objetivo: 100 },
-  { categoria: 'Fondo de Reserva / Imprevistos', objetivo: 300 }
+  { categoria: 'Fondo de Reserva / Imprevistos', objetivo: 300 },
+  { categoria: 'Carros', objetivo: 0 }
 ];
 
 const getLocalDateString = () => {
@@ -54,6 +55,7 @@ export default function App() {
 
   const [monto, setMonto] = useState('');
   const [categoria, setCategoria] = useState(PRESUPUESTO_BASE[0].categoria);
+  const [producto, setProducto] = useState('');
   const [pagadoPor, setPagadoPor] = useState('Manuel Jr');
 
   useEffect(() => {
@@ -181,11 +183,13 @@ export default function App() {
     await addDoc(collection(db, 'gastos'), {
       monto: parseFloat(monto),
       categoria,
+      producto: producto.trim(),
       pagadoPor,
       registradoPor: perfil.nombre,
       fecha: getLocalDateString()
     });
     setMonto('');
+    setProducto('');
     setTab('cuentas');
   };
 
@@ -390,6 +394,8 @@ export default function App() {
             setMonto={setMonto}
             categoria={categoria}
             setCategoria={setCategoria}
+            producto={producto}
+            setProducto={setProducto}
             pagadoPor={pagadoPor}
             setPagadoPor={setPagadoPor}
             PRESUPUESTO_BASE={presupuesto}

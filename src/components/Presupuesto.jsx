@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShoppingBag, Zap, Home, Coffee, ShieldCheck, PieChart, TrendingUp, AlertTriangle, CheckCircle2, Pencil, Save, X, CalendarDays, Download } from 'lucide-react';
+import { ShoppingBag, Zap, Home, Coffee, ShieldCheck, CarFront, PieChart, TrendingUp, AlertTriangle, CheckCircle2, Pencil, Save, X, CalendarDays, Download } from 'lucide-react';
 
 function getCurrentMonth() {
   const today = new Date();
@@ -47,7 +47,9 @@ async function downloadMonthlyExpensesPdf(expenses, month, totalCents) {
     head: [['Fecha', 'Categoría / Concepto', 'Quién pagó', 'Monto']],
     body: expenses.map(expense => [
       expense.fecha || '—',
-      expense.categoria || 'Sin categoría',
+      [expense.categoria || 'Sin categoría', expense.producto ? `Producto: ${expense.producto}` : '']
+        .filter(Boolean)
+        .join('\n'),
       expense.pagadoPor || 'No especificado',
       `$${(Math.round((Number(expense.monto) || 0) * 100) / 100).toFixed(2)}`
     ]),
@@ -117,6 +119,12 @@ const CATEGORY_META = {
     color: 'teal',
     badge: 'bg-teal-500/15 text-teal-400 border-teal-500/25',
     progress: 'from-teal-500 to-emerald-400',
+  },
+  Carros: {
+    icon: CarFront,
+    color: 'cyan',
+    badge: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/25',
+    progress: 'from-cyan-500 to-blue-400',
   },
 };
 
